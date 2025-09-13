@@ -74,6 +74,15 @@ export const createBuyerSchema = z
 
         timeline: TimelineEnum,
         source: SourceEnum,
+        status: z.enum([   // ✅ add this
+            "New",
+            "Qualified",
+            "Contacted",
+            "Visited",
+            "Negotiation",
+            "Converted",
+            "Dropped",
+        ]),
         notes: z.string().max(1000).optional(),
 
         // tags: accept comma-separated string OR array, default []
@@ -108,5 +117,13 @@ export const createBuyerSchema = z
             path: ["budgetMax"],
         }
     );
+export const updateBuyerSchema = createBuyerSchema.safeExtend({
+    updatedAt: z.preprocess(
+        (val) => (val instanceof Date ? val.toISOString() : val),
+        z.string().datetime()
+    ),
+});
 
+
+export type UpdateBuyerInput = z.infer<typeof updateBuyerSchema>;
 export type CreateBuyerInput = z.infer<typeof createBuyerSchema>;

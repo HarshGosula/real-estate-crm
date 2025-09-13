@@ -4,67 +4,63 @@ import { prisma } from "@/lib/prisma";
 import { createBuyerSchema } from "@/lib/validations/buyer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import type { BHK as BHKType, Timeline as TimelineType, Source as SourceType } from "@prisma/client";
-
-function mapBHK(input?: string | null): BHKType | null {
-    if (!input) return null;
-    if (input === "Studio") return "Studio";
-    if (input === "1") return "One";
-    if (input === "2") return "Two";
-    if (input === "3") return "Three";
-    if (input === "4") return "Four";
-    throw new Error("Invalid BHK");
-}
-
-function mapTimeline(input: string): TimelineType {
-    switch (input) {
-        case "0-3m":
-            return "ZeroTo3m";
-        case "3-6m":
-            return "ThreeTo6m";
-        case ">6m":
-            return "GreaterThan6m";
-        case "Exploring":
-            return "Exploring";
-        default:
-            throw new Error("Invalid timeline");
-    }
-}
-
-function mapSource(input: string): SourceType {
-    if (input === "Walk-in") return "WalkIn";
-    if (input === "Website") return "Website";
-    if (input === "Referral") return "Referral";
-    if (input === "Call") return "Call";
-    if (input === "Other") return "Other";
-    throw new Error("Invalid source");
-}
+import {
+    mapTimelineToDb,
+    mapBhkToDb,
+    mapSourceToDb,
+} from "@/lib/mappers/buyers";
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+        console.log("Received create payload:", body);
 
         // Validate
         const parsed = createBuyerSchema.safeParse(body);
         if (!parsed.success) {
+            console.log("Create validation errors:", parsed.error.flatten());
             return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
         }
         const data = parsed.data;
+        console.log("Parsed create data:", data);
 
         // Auth
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        // Map to Prisma enum names
-        const bhkPrisma = mapBHK(data.bhk ?? null);
-        const timelinePrisma = mapTimeline(data.timeline);
-        const sourcePrisma = mapSource(data.source);
+        // normalize email (it should already be normalized by zod, but be defensive)
+        const normalizedEmail = data.email ? data.email.trim().toLowerCase() : null;
+
+        // If email provided, ensure it doesn't already exist
+        if (normalizedEmail) {
+            const existing = await prisma.buyer.findUnique({
+                where: { email: normalizedEmail },
+            });
+            if (existing) {
+                return NextResponse.json({ error: "Email already exists" }, { status: 409 });
+            }
+        }
+
+        // Map to Prisma enum names using your mappers
+        const bhkPrisma = data.bhk ? mapBhkToDb(data.bhk) : null;
+        const timelinePrisma = mapTimelineToDb(data.timeline);
+        const sourcePrisma = mapSourceToDb(data.source);
+
+        // Ensure required fields are not undefined
+        if (!timelinePrisma) {
+            throw new Error(`Invalid timeline value: ${data.timeline}`);
+        }
+        if (!sourcePrisma) {
+            throw new Error(`Invalid source value: ${data.source}`);
+        }
+
+        console.log("Mapped values:", { bhkPrisma, timelinePrisma, sourcePrisma });
 
         // Create buyer
         const buyer = await prisma.buyer.create({
             data: {
                 fullName: data.fullName,
-                email: data.email ?? null,
+                email: normalizedEmail, // use normalized email or null
                 phone: data.phone,
                 city: data.city,
                 propertyType: data.propertyType,
@@ -74,13 +70,14 @@ export async function POST(req: Request) {
                 budgetMax: data.budgetMax ?? null,
                 timeline: timelinePrisma,
                 source: sourcePrisma,
-                notes: data.notes ?? null,
+                status: data.status,
+                notes: data.notes || null,
                 tags: data.tags ?? [],
                 ownerId: session.user.id,
             },
         });
 
-        // BuyerHistory: your Prisma schema expects buyerId, changedBy, diff
+        // BuyerHistory
         await prisma.buyerHistory.create({
             data: {
                 buyerId: buyer.id,
@@ -92,6 +89,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, buyer }, { status: 201 });
     } catch (err: any) {
         console.error("create buyer error:", err);
+
+        // If unique constraint (race or missed check), return a 409
+        if (err?.code === "P2002") {
+            return NextResponse.json({ error: "Duplicate value - email already exists" }, { status: 409 });
+        }
+
         return NextResponse.json({ error: err.message ?? "Server error" }, { status: 500 });
     }
 }
