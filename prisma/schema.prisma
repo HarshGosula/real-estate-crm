@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // hashed password
+  name      String?
+  role      Role     @default(USER)
+  buyers    Buyer[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+
+model Buyer {
+  id          String        @id @default(uuid())
+  fullName    String        @db.VarChar(80)
+  email       String?       @unique
+  phone       String        @db.VarChar(15)
+  city        City
+  propertyType PropertyType
+  bhk         BHK?
+  purpose     Purpose
+  budgetMin   Int?
+  budgetMax   Int?
+  timeline    Timeline
+  source      Source
+  status      Status        @default(New)
+  notes       String?       @db.Text
+  tags        String[]
+  ownerId     String
+  updatedAt   DateTime      @updatedAt
+  history     BuyerHistory[]
+
+  owner       User          @relation(fields: [ownerId], references: [id])
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+
+model BuyerHistory {
+  id        String   @id @default(uuid())
+  buyerId   String
+  changedBy String
+  changedAt DateTime @default(now())
+  diff      Json
+
+  buyer Buyer @relation(fields: [buyerId], references: [id])
+
+  @@index([buyerId])
+}
+
+/* Enums (Prisma names on the left; DB-stored strings via @map on the right where needed) */
+
+enum City {
+  Chandigarh
+  Mohali
+  Zirakpur
+  Panchkula
+  Other
+}
+
+enum PropertyType {
+  Apartment
+  Villa
+  Plot
+  Office
+  Retail
+}
+
+/* BHK: Prisma names map to DB values ("1","2",...); Studio stored as "Studio" */
+enum BHK {
+  Studio
+  One   @map("1")
+  Two   @map("2")
+  Three @map("3")
+  Four  @map("4")
+}
+
+enum Purpose {
+  Buy
+  Rent
+}
+
+/* Timeline: usage-friendly Prisma names mapped to desired DB strings */
+enum Timeline {
+  ZeroTo3m      @map("0-3m")
+  ThreeTo6m     @map("3-6m")
+  GreaterThan6m @map(">6m")
+  Exploring
+}
+
+/* Source: map WalkIn -> "Walk-in" in DB */
+enum Source {
+  Website
+  Referral
+  WalkIn @map("Walk-in")
+  Call
+  Other
+}
+
+enum Status {
+  New
+  Qualified
+  Contacted
+  Visited
+  Negotiation
+  Converted
+  Dropped
+}
