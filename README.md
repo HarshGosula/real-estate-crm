@@ -110,7 +110,7 @@ A production-minded mini CRM for managing buyer leads in the real estate domain.
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/HarshGosula/real-estate-crm/)
    cd real-estate-crm
    ```
 
@@ -155,7 +155,7 @@ A production-minded mini CRM for managing buyer leads in the real estate domain.
    npm run dev
    ```
    
-   Open http://localhost:3000 in your browser.
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 7. **Run tests**
    ```bash
