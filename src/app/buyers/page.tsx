@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { format } from "date-fns";
 import BuyerListClient from "@/src/components/BuyerListClient";
+import BuyerActions from "@/src/components/BuyerActions";
 
 const PAGE_SIZE = 10;
 
@@ -108,21 +109,14 @@ export default async function BuyersPage({ searchParams }: { searchParams: any }
 
                             {/* Action Buttons */}
                             <div className="flex items-center gap-2">
-                                {/* Import Button */}
-                                <button className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200 focus-ring">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                                    </svg>
-                                    <span className="hidden sm:inline">Import</span>
-                                </button>
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-3">
+                                    {/* Stats Badge (keep unchanged) */}
+                                    <div className="flex items-center gap-2">
+                                        <BuyerActions />
+                                    </div>
+                                </div>
 
-                                {/* Export Button */}
-                                <button className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200 focus-ring">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <span className="hidden sm:inline">Export</span>
-                                </button>
 
                                 {/* New Buyer Button */}
                                 <Link
